@@ -6,34 +6,28 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-# from future.builtins import range   # pylint: disable=redefined-builtin
-# import six
-# import sys
+import numpy as np
 
 from pysc2 import maps
 from pysc2 import run_configs
-# from pysc2.lib import actions
 from pysc2.lib import features
 from pysc2.lib import point
-from pysc2.tests import utils
 
-from pysc2.lib import basetest
-from pysc2.lib import app
 from s2clientprotocol import sc2api_pb2 as sc_pb
-# from pysc2.tests import replay_obs_test
 
 
 class Config(object):
     """Holds the configuration options."""
 
-    def __init__(self):
+    def __init__(self, replay_file, map_name):
         # Environment.
+        self.max_steps = 100  # for testing
+        self.replay_name = map_name + '/' + replay_file
         self.player_id = 1
-        self.map_name = 'CollectMineralsAndGas'
+        self.map_name = map_name
         self.unit_type_id = features.SCREEN_FEATURES.unit_type.index
-        # self.num_observations = 3000
-        self.screen_size_px = (32, 32)
-        self.minimap_size_px = (32, 32)
+        self.screen_size_px = (84, 84)
+        self.minimap_size_px = (64, 64)
         self.camera_width = 24
         self.random_seed = 42
 
@@ -70,7 +64,7 @@ class GameController(object):
         self._map_inst = maps.get(self._config.map_name)
         self._map_data = run_config.map_data(self._map_inst.path)
         run_config.replay_dir = '/Applications/Starcraft II/Replays/'
-        self._replay_data = run_config.replay_data('CollectMineralsAndGas/CollectMineralsAndGas_2017-08-31-22-24-49.SC2Replay')
+        self._replay_data = run_config.replay_data(self._config.replay_name)
 
         self._sc2_proc = run_config.start()
         self._controller = self._sc2_proc.controller
@@ -107,13 +101,19 @@ class GameController(object):
 
 class GetObsAndActs(object):
 
+    def __init__(self, map_name, replay_file):
+
+        self.map_name = map_name
+        self.replay_file = replay_file
+
+
     def _get_replay_data(self, controller, config):
         """Runs a replay to get the replay data."""
         f = features.Features(controller.game_info())
 
-        observations = {}
-        # for _ in range(config.num_observations):
-        while True:
+        rl_data = []
+        # while True:
+        for _ in range(config.max_steps):  # for testing
             o = controller.observe()
             obs = f.transform_obs(o.observation)
 
@@ -123,31 +123,32 @@ class GetObsAndActs(object):
 
             if o.actions:
                 action = f.reverse_action(o.actions[0])
-                print(action)
             else:
                 action = 'no action'
-                print(action)
+
+            step = o.observation.game_loop
 
             unit_type = obs['screen'][config.unit_type_id]
-            observations[o.observation.game_loop] = unit_type
+            unit_type_frame = np.asarray(unit_type)
 
-            # print(_layer_string(unit_type))
+            rl_data.append([step, unit_type_frame, action])
 
             controller.step()
 
-        return observations
+        return rl_data
 
     def do_it(self):
-        config = Config()
+        config = Config(map_name=self.map_name, replay_file=self.replay_file)
 
         with GameController(config) as game_controller:
 
             game_controller.start_replay(game_controller._replay_data)
 
-            observations = self._get_replay_data(game_controller.controller, config)
+            rl_data = self._get_replay_data(game_controller.controller, config)
 
-            return observations
+            return rl_data
 
 
 if __name__ == '__main__':
-    GetObsAndActs().do_it()
+    GetObsAndActs(
+        map_name='CollectMineralShards', replay_file='CollectMineralShards_2017-08-31-20-07-32.SC2Replay').do_it()
