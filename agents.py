@@ -223,7 +223,7 @@ class CollectMinerals(BaseAgent):
                             return actions.FunctionCall(_TRAIN_SCV, [_NOT_QUEUED])
             unit_type = obs.observation["screen"][_UNIT_TYPE]
             minerals_observed = (unit_type == _MINERAL_FIELD)
-            processed_neutral_y, processed_neutral_x = (window_avg(minerals_observed, 5) > 0.9).nonzero()
+            processed_neutral_y, processed_neutral_x = (window_avg(minerals_observed, 2) > 0.99).nonzero()
             command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
             command_center = [int(command_center_x.mean()), int(command_center_y.mean())]
             zipped_minerals = zip(processed_neutral_x, processed_neutral_y)
