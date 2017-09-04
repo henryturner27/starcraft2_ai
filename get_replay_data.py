@@ -63,7 +63,7 @@ class GameController(object):
         run_config = run_configs.get()
         self._map_inst = maps.get(self._config.map_name)
         self._map_data = run_config.map_data(self._map_inst.path)
-        run_config.replay_dir = '/Applications/Starcraft II/Replays/'
+        run_config.replay_dir = '/Users/turnerh27/Dropbox (Personal)/jupyter_projects/starcraft2_ai/replays/'
         self._replay_data = run_config.replay_data(self._config.replay_name)
 
         self._sc2_proc = run_config.start()
