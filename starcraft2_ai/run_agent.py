@@ -18,7 +18,7 @@ from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
 
-import agents
+import starcraft2_ai.agents as agents
 from pysc2.env import run_loop
 from pysc2.env import sc2_env
 

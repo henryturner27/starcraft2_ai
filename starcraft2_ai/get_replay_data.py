@@ -112,8 +112,7 @@ class GetObsAndActs(object):
         f = features.Features(controller.game_info())
 
         rl_data = []
-        # while True:
-        for _ in range(config.max_steps):  # for testing
+        while True:
             o = controller.observe()
             obs = f.transform_obs(o.observation)
 
