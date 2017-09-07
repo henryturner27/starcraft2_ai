@@ -2,8 +2,6 @@
 <project version="4">
   <component name="ChangeListManager">
     <list default="true" id="30b1e28b-3f2d-4f71-b39c-bfeb60d21e53" name="Default" comment="">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/misc.xml" afterPath="$PROJECT_DIR$/.idea/misc.xml" />
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/starcraft_ai.iml" afterPath="$PROJECT_DIR$/.idea/starcraft_ai.iml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/.idea/workspace.xml" afterPath="$PROJECT_DIR$/.idea/workspace.xml" />
       <change type="MODIFICATION" beforePath="$PROJECT_DIR$/starcraft2_ai/platform_settings.py" afterPath="$PROJECT_DIR$/starcraft2_ai/platform_settings.py" />
     </list>
@@ -20,7 +18,7 @@
       <file leaf-file-name="run_agent.py" pinned="false" current-in-tab="false">
         <entry file="file://$PROJECT_DIR$/starcraft2_ai/run_agent.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="-91">
+            <state relative-caret-position="-208">
               <caret line="16" column="0" lean-forward="true" selection-start-line="16" selection-start-column="0" selection-end-line="16" selection-end-column="0" />
               <folding>
                 <element signature="e#658#696#0" expanded="true" />
@@ -29,37 +27,23 @@
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="platform_settings.py" pinned="false" current-in-tab="true">
-        <entry file="file://$PROJECT_DIR$/starcraft2_ai/platform_settings.py">
+      <file leaf-file-name="get_replay_data.py" pinned="false" current-in-tab="false">
+        <entry file="file://$PROJECT_DIR$/starcraft2_ai/get_replay_data.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="165">
-              <caret line="13" column="56" lean-forward="false" selection-start-line="13" selection-start-column="56" selection-end-line="13" selection-end-column="56" />
+            <state relative-caret-position="-928">
+              <caret line="73" column="0" lean-forward="false" selection-start-line="73" selection-start-column="0" selection-end-line="73" selection-end-column="0" />
               <folding />
             </state>
           </provider>
         </entry>
       </file>
-      <file leaf-file-name="get_replay_data.py" pinned="false" current-in-tab="false">
-        <entry file="file://$PROJECT_DIR$/starcraft2_ai/get_replay_data.py">
+      <file leaf-file-name="platform_settings.py" pinned="false" current-in-tab="true">
+        <entry file="file://$PROJECT_DIR$/starcraft2_ai/platform_settings.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="885">
-              <caret line="73" column="0" lean-forward="false" selection-start-line="73" selection-start-column="0" selection-end-line="73" selection-end-column="0" />
+            <state relative-caret-position="120">
+              <caret line="8" column="43" lean-forward="true" selection-start-line="8" selection-start-column="43" selection-end-line="8" selection-end-column="43" />
               <folding>
-                <element signature="e#78#116#0" expanded="true" />
-                <marker date="1504760049000" expanded="true" signature="2225:2474" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="2225:3316" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="2516:2841" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="2936:3180" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3012:3084" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3111:3180" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3206:3226" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3295:3316" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3347:4606" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3395:3468" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3522:4268" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="3670:4244" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="4290:4606" ph="..." />
-                <marker date="1504760049000" expanded="true" signature="4425:4606" ph="..." />
+                <element signature="e#0#27#0" expanded="true" />
               </folding>
             </state>
           </provider>
@@ -549,31 +533,15 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/starcraft2_ai/get_replay_data.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="885">
+        <state relative-caret-position="-928">
           <caret line="73" column="0" lean-forward="false" selection-start-line="73" selection-start-column="0" selection-end-line="73" selection-end-column="0" />
-          <folding>
-            <element signature="e#78#116#0" expanded="true" />
-            <marker date="1504760049000" expanded="true" signature="2225:2474" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="2225:3316" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="2516:2841" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="2936:3180" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3012:3084" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3111:3180" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3206:3226" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3295:3316" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3347:4606" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3395:3468" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3522:4268" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="3670:4244" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="4290:4606" ph="..." />
-            <marker date="1504760049000" expanded="true" signature="4425:4606" ph="..." />
-          </folding>
+          <folding />
         </state>
       </provider>
     </entry>
     <entry file="file://$PROJECT_DIR$/starcraft2_ai/run_agent.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="-91">
+        <state relative-caret-position="-208">
           <caret line="16" column="0" lean-forward="true" selection-start-line="16" selection-start-column="0" selection-end-line="16" selection-end-column="0" />
           <folding>
             <element signature="e#658#696#0" expanded="true" />
@@ -583,9 +551,11 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/starcraft2_ai/platform_settings.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="165">
-          <caret line="13" column="56" lean-forward="false" selection-start-line="13" selection-start-column="56" selection-end-line="13" selection-end-column="56" />
-          <folding />
+        <state relative-caret-position="120">
+          <caret line="8" column="43" lean-forward="true" selection-start-line="8" selection-start-column="43" selection-end-line="8" selection-end-column="43" />
+          <folding>
+            <element signature="e#0#27#0" expanded="true" />
+          </folding>
         </state>
       </provider>
     </entry>
