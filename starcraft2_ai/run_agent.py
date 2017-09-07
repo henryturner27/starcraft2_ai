@@ -19,6 +19,7 @@ from __future__ import division
 from __future__ import print_function
 
 import starcraft2_ai.agents as agents
+import starcraft2_ai.platform_settings as platform_settings
 from pysc2.env import run_loop
 from pysc2.env import sc2_env
 
@@ -28,6 +29,7 @@ class RunAgent(object):
     def __init__(self, map_name, agent):
         self.map_name = map_name
         self.agent = agent
+        self.replay_dir = platform_settings.replay_dir
 
     def run_agent(self):
         steps = 100
@@ -38,7 +40,7 @@ class RunAgent(object):
                 minimap_size_px=(64, 64),
                 agent_race='T',
                 save_replay_steps=steps * step_mul,
-                replay_dir='/Users/turnerh27/Dropbox (Personal)/jupyter_projects/starcraft2_ai/replays/'+self.map_name,
+                replay_dir=self.replay_dir + self.map_name,
                 step_mul=step_mul,
                 game_steps_per_episode=steps * step_mul) as env:
             agent = self.agent
