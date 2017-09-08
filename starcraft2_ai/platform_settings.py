@@ -16,3 +16,5 @@ elif system() == 'Darwin':
     dropbox_path = json.loads(dropbox_info)['personal']['path']
     replay_dir = dropbox_path + '/jupyter_projects/starcraft2_ai/replays/'
     dropbox_json_file.close()
+else:
+    print('Dropbox location not found. Saving replays to default location.')
