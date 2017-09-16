@@ -23,7 +23,7 @@ class Config(object):
 
     def __init__(self, replay_file, map_name):
         # Environment.
-        self.max_steps = 100  # for testing
+        self.max_steps = 2000  # for testing
         self.replay_name = map_name + '/' + replay_file
         self.player_id = 1
         self.map_name = map_name
