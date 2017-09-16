@@ -176,10 +176,11 @@ class BaseAgent(object):
         self.initial_worker_selection = False
         self.freeze_sd_building = 0
         self.freeze_ref_worker_assignment = 0
-        self.barracks_to_build = 1
+        self.barracks_to_build = 3
         self.barracks_built = 0
         self.freeze_barracks_selection = 0
         self.building_locations = []
+        self.barracks_locations = []
 
     def step(self, obs):
         self.steps += 1
@@ -551,49 +552,43 @@ class BuildMarines(BaseAgent):
 
             # build supply depots
             if ((obs.observation["player"][4] - obs.observation["player"][3]) <= 3) & (
-                        obs.observation["player"][1] >= 100) & (
-                        _BUILD_SUPPLY_DEPOT not in obs.observation["available_actions"]) & (
-                        self.steps >= self.freeze_sd_building + 50):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
-                scv_observed = (unit_type == _SCV)
-                processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
-                scv_mass_top_left = [processed_neutral_x.mean() - 3, processed_neutral_y.mean() - 3]
-                scv_mass_bottom_right = [processed_neutral_x.mean() + 3, processed_neutral_y.mean() + 3]
-                print('select some scvs 235')
-                return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
-            elif ((obs.observation["player"][4] - obs.observation["player"][3]) <= 3) & (
-                        obs.observation["player"][1] >= 100) & (
-                _BUILD_SUPPLY_DEPOT in obs.observation["available_actions"]) & (
-                        self.steps >= self.freeze_sd_building + 50):
-                player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
-                background = (player_relative == 0)
-                ####testing blocking out known placements
-                for building in self.building_locations:
-                    background[
-                    np.clip(building[0] - 4, 0, len(background)):np.clip(building[0] + 4, 0, len(background)),
-                    np.clip(building[1] - 4, 0, len(background)):np.clip(building[1] + 4, 0, len(background))] = 0
-                ####
-                ####random placement
-                # processed_freespace_x, processed_freespace_y = (window_avg(background, 4) > 0.99).nonzero()
-                # random_placement = random.choice(range(len(processed_freespace_x)))
-                # freespace = [int(processed_freespace_x[random_placement]), int(processed_freespace_y[random_placement])]
-                ####
-                ####fixed placement
-                freespace = np.unravel_index(window_avg(background, 12).argmax(), (84, 84))
-                ####
-                self.freeze_sd_building = self.steps
-                self.building_locations.append(freespace)
-                print('build supply depot 544')
-                return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [[0], freespace])
+                        obs.observation["player"][1] >= 100) & ((self.steps >= self.freeze_sd_building + 150) |
+                                                                                   (len(self.building_locations) == 0)):
+                if (_BUILD_SUPPLY_DEPOT not in obs.observation["available_actions"]):
+                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    scv_observed = (unit_type == _SCV)
+                    processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
+                    scv_mass_top_left = [processed_neutral_x.mean() - 3, processed_neutral_y.mean() - 3]
+                    scv_mass_bottom_right = [processed_neutral_x.mean() + 3, processed_neutral_y.mean() + 3]
+                    print('select some scvs 235')
+                    return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
+                elif (_BUILD_SUPPLY_DEPOT in obs.observation["available_actions"]):
+                    player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
+                    background = (player_relative == 0)
+                    ####testing blocking out known placements
+                    for building in self.building_locations:
+                        background[
+                        np.clip(building[0] - 4, 0, len(background)):np.clip(building[0] + 4, 0, len(background)),
+                        np.clip(building[1] - 4, 0, len(background)):np.clip(building[1] + 4, 0, len(background))] = 0
+                    ####
+                    ####random placement
+                    # processed_freespace_x, processed_freespace_y = (window_avg(background, 4) > 0.99).nonzero()
+                    # random_placement = random.choice(range(len(processed_freespace_x)))
+                    # freespace = [int(processed_freespace_x[random_placement]), int(processed_freespace_y[random_placement])]
+                    ####
+                    ####fixed placement
+                    freespace = np.unravel_index(window_avg(background, 12).argmax(), (84, 84))
+                    ####
+                    self.freeze_sd_building = self.steps
+                    self.building_locations.append(freespace)
+                    print('build supply depot 544')
+                    return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [[0], freespace])
 
             # build barracks
-            if (len(list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 2) > 0.99).nonzero()[
-                             0])) < self.barracks_to_build) & (obs.observation["player"][1] >= 150) & (
-                        obs.observation["player"][3] >= 13) & (_BUILD_BARRACKS in obs.observation["available_actions"]):
-                print('len barracks coords', str(
-                    len(list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0]))))
-                print('barracks coords', str(
-                    list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))
+            if (self.barracks_built < self.barracks_to_build) & \
+                    (obs.observation["player"][1] >= 150) & (obs.observation["player"][3] >= 13) & \
+                    (_BUILD_BARRACKS in obs.observation["available_actions"]):
+
                 player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
                 background = (player_relative == 0)
                 for building in self.building_locations:
@@ -610,77 +605,91 @@ class BuildMarines(BaseAgent):
                 freespace = np.unravel_index(window_avg(background, 12).argmax(), (84, 84))
                 ####
                 self.building_locations.append(freespace)
+                self.barracks_locations.append(freespace)
+                self.freeze_barracks_selection = self.steps
+                self.barracks_built += 1
                 print('build barracks 472')
                 return actions.FunctionCall(_BUILD_BARRACKS, [[0], freespace])
 
             # set barracks to control group
-            if len(list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 2) > 0.99).nonzero()[0])) > \
-                    obs.observation["control_groups"][4][1]:
-                if (len(obs.observation["multi_select"]) == len(
-                        list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 2) > 0.99).nonzero()[0]))):
-                    unit_list = []
+            if (obs.observation["control_groups"][4][1] < self.barracks_built) & (self.barracks_built == 1) & \
+                (self.steps > self.freeze_barracks_selection + 50):
+                # if (obs.observation["multi_select"].any() != _BARRACKS):
+                    # unit_type = None
+                # for unit in obs.observation["multi_select"]:
+                print(obs.observation["single_select"])
+                print(obs.observation["single_select"][0])
+                if obs.observation["single_select"][0][0] != _BARRACKS:
+                    print('select all barracks 621')
+                    return actions.FunctionCall(_SELECT_POINT, [[2], self.barracks_locations[0]])
+                else:
+                    return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
+
+            if (obs.observation["control_groups"][4][1] < self.barracks_built) & (self.barracks_built > 1) & \
+                    (self.steps > self.freeze_barracks_selection + 50):
+                if len(obs.observation['multi_select']) == 0:
+                    return actions.FunctionCall(_SELECT_POINT, [[2], self.barracks_locations[0]])
+                else:
+                    print(obs.observation["multi_select"])
+                    print(obs.observation["multi_select"][0])
                     for unit in obs.observation["multi_select"]:
                         if unit[0] != _BARRACKS:
-                            return actions.FunctionCall(_SELECT_UNIT, [[3], [unit[0]]])
+                            print('select all barracks 636')
+                            return actions.FunctionCall(_SELECT_POINT, [[2], self.barracks_locations[0]])
                         else:
-                            unit_type = obs.observation["screen"][_UNIT_TYPE]
-                    barracks = (unit_type == _BARRACKS)
+                            return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
+                    # print('select all barracks 548')
+                    # return actions.FunctionCall(_SELECT_POINT, [[0], self.barracks_locations[0]])
+                # elif (obs.observation["multi_select"].all() == _BARRACKS):
+                #     print('set barracks to control group 623')
+                #     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
+                            # unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    # barracks = (unit_type == _BARRACKS)
 
                     ###### DEBUGGING - it doesn't select all barracks for some reason
-                    print('len barracks coords', str(len(
-                        list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0]))))
-                    print('barracks coords', str(
-                        list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))
+                    # print('len barracks coords', str(len(
+                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0]))))
+                    # print('barracks coords', str(
+                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))
                     # np.savetxt('unit_type_array.txt', unit_type, delimiter=',')
                     # np.savetxt('barracks_array.txt', barracks, delimiter=',')
                     # test_x, test_y = barracks.nonzero()
                     # print(str(np.argmax(window_avg(barracks, 3))))
-                    processed_barracks_x, processed_barracks_y = (window_avg(barracks, 2) > 0.99).nonzero()
-                    zipped_barracks = list(zip(processed_barracks_x, processed_barracks_y))
+                    # processed_barracks_x, processed_barracks_y = (window_avg(barracks, 2) > 0.99).nonzero()
+                    # zipped_barracks = list(zip(processed_barracks_x, processed_barracks_y))
                     # print(str(zipped_barracks))
-                    selected_barracks = zipped_barracks[0]
+                    # selected_barracks = zipped_barracks[0]
                     # print(str(selected_barracks))
 
-                    print(str(zipped_barracks))
+                    # print(str(zipped_barracks))
                     ############end debugging
 
-                    print('select all barracks 519')
-                    return actions.FunctionCall(_SELECT_POINT,
-                                                [[_ALL_TYPE], [selected_barracks[0], selected_barracks[1]]])
-
-                    print(str('multi select len:'), str(len(obs.observation["multi_select"])))
-                    print(str('multi select:'), str(obs.observation["multi_select"]))
-                    print('len barracks coords', str(len(
-                        list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0]))))
-                    print('barracks coords', str(
-                        list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))
-                    print('set barracks to control group 4')
-                    return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
-                elif (len(obs.observation["multi_select"] != len(list(
-                        (window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))):
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
-                    barracks = (unit_type == _BARRACKS)
+                    # print('set barracks to control group 4')
+                    # return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
+                # else:
+                    # unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    # barracks = (unit_type == _BARRACKS)
 
                     ###### DEBUGGING - it doesn't select all barracks for some reason
-                    print('len barracks coords', str(len(
-                        list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0]))))
-                    print('barracks coords', str(
-                        list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))
+                    # print('len barracks coords', str(len(
+                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 4) > 0.99).nonzero()[0]))))
+                    # print('barracks coords', str(
+                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 4) > 0.99).nonzero()[0])))
                     # np.savetxt('unit_type_array.txt', unit_type, delimiter=',')
                     # np.savetxt('barracks_array.txt', barracks, delimiter=',')
                     # test_x, test_y = barracks.nonzero()
                     # print(str(np.argmax(window_avg(barracks, 3))))
-                    processed_barracks_x, processed_barracks_y = (window_avg(barracks, 2) > 0.99).nonzero()
-                    zipped_barracks = list(zip(processed_barracks_x, processed_barracks_y))
+                    # processed_barracks_x, processed_barracks_y = (window_avg(barracks, 4) > 0.99).nonzero()
+                    # zipped_barracks = list(zip(processed_barracks_x, processed_barracks_y))
                     # print(str(zipped_barracks))
-                    selected_barracks = zipped_barracks[0]
+                    # selected_barracks = zipped_barracks[0]
                     # print(str(selected_barracks))
 
-                    print(str(zipped_barracks))
+                    # print(str(zipped_barracks))
                     ############end debugging
 
-                    print('select all barracks 548')
-                    return actions.FunctionCall(_SELECT_POINT, [[0], [selected_barracks[0], selected_barracks[1]]])
+                    # print('select all barracks 548')
+                    # return actions.FunctionCall(_SELECT_POINT, [[0], self.barracks_locations[0]])
 
             # train marines
             if (obs.observation["player"][3] < obs.observation["player"][4]) & (obs.observation["player"][1] >= 50) & (
