@@ -16,6 +16,7 @@ from pysc2.lib import point
 from s2clientprotocol import sc2api_pb2 as sc_pb
 
 import starcraft2_ai.platform_settings as platform_settings
+from starcraft2_ai.minigame_agents import window_avg
 
 
 class Config(object):
@@ -153,4 +154,4 @@ class GetObsAndActs(object):
 
 if __name__ == '__main__':
     GetObsAndActs(
-        map_name='CollectMineralShards', replay_file='CollectMineralShards_2017-08-31-20-07-32.SC2Replay').do_it()
+        map_name='Simple128', replay_file='Simple128_2017-09-16-19-37-07.SC2Replay').do_it()

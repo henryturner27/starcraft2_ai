@@ -12,7 +12,7 @@
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-"""Run a random agent for a few steps."""
+"""Run an agent for a few steps."""
 
 from __future__ import absolute_import
 from __future__ import division
@@ -48,4 +48,4 @@ class RunAgent(object):
 
 
 if __name__ == "__main__":
-    RunAgent(map_name='CollectMineralsAndGas', agent=agents.CollectMinerals()).run_agent()
+    RunAgent(map_name='Simple128', agent=agents.TerranBasicAgent()).run_agent()
