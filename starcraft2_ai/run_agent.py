@@ -39,7 +39,7 @@ class RunAgent(object):
         self.replay_dir = platform_settings.replay_dir
 
     def run_agent(self):
-        steps = 2000
+        steps = 1000
         step_mul = 8
         with sc2_env.SC2Env(
                 map_name=self.map_name,
