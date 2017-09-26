@@ -8,6 +8,9 @@ from __future__ import print_function
 
 import numpy as np
 
+import sys
+import gflags as flags
+
 from pysc2 import maps
 from pysc2 import run_configs
 from pysc2.lib import features
@@ -16,7 +19,8 @@ from pysc2.lib import point
 from s2clientprotocol import sc2api_pb2 as sc_pb
 
 import starcraft2_ai.platform_settings as platform_settings
-from starcraft2_ai.minigame_agents import window_avg
+
+FLAGS = flags.FLAGS
 
 
 class Config(object):
@@ -24,7 +28,8 @@ class Config(object):
 
     def __init__(self, replay_file, map_name):
         # Environment.
-        self.max_steps = 2000  # for testing
+        FLAGS(sys.argv)
+        self.max_steps = 2000
         self.replay_name = map_name + '/' + replay_file
         self.player_id = 1
         self.map_name = map_name

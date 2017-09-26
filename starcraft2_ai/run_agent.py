@@ -23,10 +23,17 @@ import starcraft2_ai.platform_settings as platform_settings
 from pysc2.env import run_loop
 from pysc2.env import sc2_env
 
+import sys
+import gflags as flags
+
+
+FLAGS = flags.FLAGS
+
 
 class RunAgent(object):
 
     def __init__(self, map_name, agent):
+        FLAGS(sys.argv)
         self.map_name = map_name
         self.agent = agent
         self.replay_dir = platform_settings.replay_dir
