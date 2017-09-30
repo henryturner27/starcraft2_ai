@@ -11,6 +11,8 @@ _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
 _UNIT_TYPE = features.SCREEN_FEATURES.unit_type.index
 _UNIT_DENSITY = features.SCREEN_FEATURES.unit_density.index
 _SELECTED = features.SCREEN_FEATURES.selected.index
+_MM_SELECTED = features.MINIMAP_FEATURES.selected.index
+_MM_CAMERA = features.MINIMAP_FEATURES.camera.index
 _BACKGROUND = 0
 _PLAYER_FRIENDLY = 1
 _PLAYER_NEUTRAL = 3  # beacon/minerals
@@ -29,6 +31,7 @@ _SELECT_UNIT = actions.FUNCTIONS.select_unit.id
 _CONTROL_GROUP = actions.FUNCTIONS.select_control_group.id
 _SET_CONTROL_GROUP = [1]
 _SELECT_CONTROL_GROUP = [0]
+_MOVE_CAMERA = actions.FUNCTIONS.move_camera.id
 _MOVE_SCREEN = actions.FUNCTIONS.Move_screen.id
 _SMART_SCREEN = actions.FUNCTIONS.Smart_screen.id
 _ATTACK_SCREEN = actions.FUNCTIONS.Attack_screen.id
@@ -45,6 +48,9 @@ _QUEUED = [1]
 _NOT_QUEUED = [0]
 _SELECT_ALL = [0]
 
+
+def _layer_string(layer):
+    return '\n'.join(' '.join(str(v) for v in row) for row in layer)
 
 def count_nonzero(array):
     final_list = []
@@ -100,6 +106,8 @@ class TerranBasicAgent(BaseAgent):
     def reset(self):
         self.builder_scvs_selected = False
         self.army_selected = False
+        self.initial_base = None
+        self.initial_scv_loc = None
         self.first_refinery_location = None
         self.second_refinery_location = None
         self.refineries_built = 0
@@ -131,6 +139,8 @@ class TerranBasicAgent(BaseAgent):
             # set control group for command center to 5
             if ((obs.observation["control_groups"][5][0]) == 0):
                 if (_RALLY_WORKERS in obs.observation["available_actions"]):
+                    base_x, base_y = (obs.observation["minimap"][_MM_SELECTED] == 1).nonzero()
+                    self.initial_base = [int(base_x.mean()), int(base_y.mean())]
                     print('set command center to control group 5')
                     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [5]])
                 else:
@@ -146,7 +156,11 @@ class TerranBasicAgent(BaseAgent):
                     self.idle_worker_selected = True
                     print('select idle worker 198')
                     return actions.FunctionCall(_SELECT_IDLE_WORKER, [_NOT_QUEUED])
-                elif self.idle_worker_selected:
+                if obs.observation["minimap"][_MM_CAMERA][self.initial_base[0], self.initial_base[1]] != 1:
+                    print('move camera to initial base 159')
+                    return actions.FunctionCall(_MOVE_CAMERA, [self.initial_base])
+                if (self.idle_worker_selected) & \
+                        (obs.observation["minimap"][_MM_CAMERA][self.initial_base[0], self.initial_base[1]] == 1):
                     self.idle_worker_selected = False
 
                     selected = obs.observation["screen"][_SELECTED]
@@ -372,14 +386,44 @@ class TerranBasicAgent(BaseAgent):
                 self.builder_scvs_selected = False
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [5]])
             elif cycler == 1:
-                self.army_selected = False
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
-                scv_observed = (unit_type == _SCV)
-                processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
-                scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
-                scv_mass_bottom_right = [processed_neutral_x.mean() + 5, processed_neutral_y.mean() + 5]
-                self.builder_scvs_selected = True
-                return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
+                if (obs.observation["minimap"][_MM_CAMERA][self.initial_base[0], self.initial_base[1]] == 1) & \
+                        (self.initial_scv_loc is None):
+                    if len(obs.observation["multi_select"]) < 2:
+                        unit_type = obs.observation["screen"][_UNIT_TYPE]
+                        scv_observed = (unit_type == _SCV)
+                        processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
+                        scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
+                        scv_mass_bottom_right = [processed_neutral_x.mean() + 5, processed_neutral_y.mean() + 5]
+                        self.builder_scvs_selected = True
+                        return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
+                    else:
+                        for unit in obs.observation["multi_select"]:
+                            if unit[0] != _SCV:
+                                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                                scv_observed = (unit_type == _SCV)
+                                processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
+                                scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
+                                scv_mass_bottom_right = [processed_neutral_x.mean() + 5, processed_neutral_y.mean() + 5]
+                                self.builder_scvs_selected = True
+                                return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
+                            else:
+                                selected_scvs = obs.observation["minimap"][_MM_SELECTED]
+                                selected_scv_y, selected_scv_x = (selected_scvs == 1).nonzero()
+                                selected_scv_x = selected_scv_x.mean()
+                                selected_scv_y = selected_scv_y.mean()
+                                self.initial_scv_loc = [int(selected_scv_x), int(selected_scv_y)]
+                elif (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[0], self.initial_scv_loc[1]] == 1) & \
+                        (self.initial_scv_loc is not None):
+                    self.army_selected = False
+                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    scv_observed = (unit_type == _SCV)
+                    processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
+                    scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
+                    scv_mass_bottom_right = [processed_neutral_x.mean() + 5, processed_neutral_y.mean() + 5]
+                    self.builder_scvs_selected = True
+                    return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
+                else:
+                    return actions.FunctionCall(_MOVE_CAMERA, [self.initial_scv_loc])
             elif cycler == 2:
                 self.army_selected = False
                 self.builder_scvs_selected = False
