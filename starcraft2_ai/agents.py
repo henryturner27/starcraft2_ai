@@ -1,17 +1,3 @@
-# Copyright 2017 Google Inc. All Rights Reserved.
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#      http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS-IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
 from __future__ import absolute_import
 from __future__ import division
 from __future__ import print_function
@@ -113,6 +99,7 @@ class TerranBasicAgent(BaseAgent):
 
     def reset(self):
         self.builder_scvs_selected = False
+        self.army_selected = False
         self.first_refinery_location = None
         self.second_refinery_location = None
         self.refineries_built = 0
@@ -341,8 +328,6 @@ class TerranBasicAgent(BaseAgent):
                 # if (obs.observation["multi_select"].any() != _BARRACKS):
                     # unit_type = None
                 # for unit in obs.observation["multi_select"]:
-                print(obs.observation["single_select"])
-                print(obs.observation["single_select"][0])
                 if obs.observation["single_select"][0][0] != _BARRACKS:
                     print('select all barracks 621')
                     return actions.FunctionCall(_SELECT_POINT, [[2], self.barracks_locations[0]])
@@ -354,8 +339,6 @@ class TerranBasicAgent(BaseAgent):
                 if len(obs.observation['multi_select']) == 0:
                     return actions.FunctionCall(_SELECT_POINT, [[2], self.barracks_locations[0]])
                 else:
-                    print(obs.observation["multi_select"])
-                    print(obs.observation["multi_select"][0])
                     for unit in obs.observation["multi_select"]:
                         if unit[0] != _BARRACKS:
                             print('select all barracks 636')
@@ -376,17 +359,20 @@ class TerranBasicAgent(BaseAgent):
                 else:
                     return actions.FunctionCall(_NO_OP, [])
 
-            # if nothing to do then cycle through control groups and workers
-            if (obs.observation["control_groups"][4][1]) > 0:
+            # if nothing to do then cycle through control groups, workers, and army
+            cgs = 2
+            if obs.observation["control_groups"][4][1] > 0:
                 cgs = 3
-            else:
-                cgs = 2
+            if obs.observation["player"][8] > 0:
+                cgs = 4
             cycler = self.steps % cgs
 
             if cycler == 0:
+                self.army_selected = False
                 self.builder_scvs_selected = False
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [5]])
             elif cycler == 1:
+                self.army_selected = False
                 unit_type = obs.observation["screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
@@ -395,5 +381,10 @@ class TerranBasicAgent(BaseAgent):
                 self.builder_scvs_selected = True
                 return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
             elif cycler == 2:
+                self.army_selected = False
                 self.builder_scvs_selected = False
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [4]])
+            elif cycler == 3:
+                self.builder_scvs_selected = False
+                self.army_selected = True
+                return actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])
