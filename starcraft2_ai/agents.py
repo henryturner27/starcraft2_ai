@@ -142,7 +142,7 @@ class TerranBasicAgent(BaseAgent):
             if ((obs.observation["control_groups"][5][0]) == 0):
                 if (_RALLY_WORKERS in obs.observation["available_actions"]):
                     base_y, base_x = (obs.observation["minimap"][_MM_SELECTED] == 1).nonzero()
-                    self.initial_base = [int(base_y.mean()), int(base_x.mean())]
+                    self.initial_base = [int(base_x.mean()), int(base_y.mean())]
                     print('set command center to control group 5')
                     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [5]])
                 else:
@@ -153,7 +153,7 @@ class TerranBasicAgent(BaseAgent):
                     return actions.FunctionCall(_SELECT_POINT, [_NOT_QUEUED, [command_center[0], command_center[1]]])
 
             # define initial scv location
-            if (obs.observation["minimap"][_MM_CAMERA][self.initial_base[0], self.initial_base[1]] == 1) & \
+            if (obs.observation["minimap"][_MM_CAMERA][self.initial_base[1], self.initial_base[0]] == 1) & \
                     (self.initial_scv_loc is None):
                 if len(obs.observation["multi_select"]) < 2:
                     unit_type = obs.observation["screen"][_UNIT_TYPE]
@@ -178,11 +178,11 @@ class TerranBasicAgent(BaseAgent):
                     self.idle_worker_selected = True
                     print('select idle worker 198')
                     return actions.FunctionCall(_SELECT_IDLE_WORKER, [_NOT_QUEUED])
-                if obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[0], self.initial_scv_loc[1]] != 1:
+                if obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] != 1:
                     print('move camera to scv line 159')
                     return actions.FunctionCall(_MOVE_CAMERA, [self.initial_scv_loc])
                 if (self.idle_worker_selected) & \
-                        (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[0], self.initial_scv_loc[1]] == 1):
+                        (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1):
 
                     self.idle_worker_selected = False
                     unit_type = obs.observation["screen"][_UNIT_TYPE]
@@ -396,7 +396,7 @@ class TerranBasicAgent(BaseAgent):
                 self.builder_scvs_selected = False
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [5]])
             elif cycler == 1:
-                if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[0], self.initial_scv_loc[1]] == 1) & \
+                if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
                         (self.initial_scv_loc is not None):
                     self.army_selected = False
                     unit_type = obs.observation["screen"][_UNIT_TYPE]
