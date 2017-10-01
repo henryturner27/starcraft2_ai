@@ -14,6 +14,7 @@ _SELECTED = features.SCREEN_FEATURES.selected.index
 _MM_SELECTED = features.MINIMAP_FEATURES.selected.index
 _MM_PLAYER_RELATIVE = features.MINIMAP_FEATURES.player_relative.index
 _MM_CAMERA = features.MINIMAP_FEATURES.camera.index
+_MM_HEIGHT = features.MINIMAP_FEATURES.height_map.index
 _BACKGROUND = 0
 _PLAYER_FRIENDLY = 1
 _PLAYER_NEUTRAL = 3  # beacon/minerals
@@ -43,6 +44,7 @@ _BUILD_REFINERY = actions.FUNCTIONS.Build_Refinery_screen.id
 _BUILD_SUPPLY_DEPOT = actions.FUNCTIONS.Build_SupplyDepot_screen.id
 _BUILD_BARRACKS = actions.FUNCTIONS.Build_Barracks_screen.id
 _RALLY_WORKERS = actions.FUNCTIONS.Rally_Workers_screen.id
+_SMART_MINIMAP = actions.FUNCTIONS.Smart_minimap.id
 _TRAIN_SCV = actions.FUNCTIONS.Train_SCV_quick.id
 _TRAIN_MARINE = actions.FUNCTIONS.Train_Marine_quick.id
 _QUEUED = [1]
@@ -107,6 +109,7 @@ class TerranBasicAgent(BaseAgent):
     def reset(self):
         self.builder_scvs_selected = False
         self.army_selected = False
+        self.production_buildings_selected = False
         self.initial_base = None
         self.initial_scv_loc = None
         self.first_refinery_location = None
@@ -116,6 +119,7 @@ class TerranBasicAgent(BaseAgent):
         self.workers_on_ref_two = 0
         self.assigned_worker_to_gas = 0
         self.rally_set = False
+        self.production_rally_set = False
         self.workers_mining = False
         self.idle_worker_selected = False
         self.initial_worker_selection = False
@@ -127,6 +131,7 @@ class TerranBasicAgent(BaseAgent):
         self.building_locations = []
         self.supply_depot_locations = []
         self.barracks_locations = []
+        self.front_ramp = None
 
     def step(self, obs):
         super(TerranBasicAgent, self).step(obs)
@@ -135,14 +140,41 @@ class TerranBasicAgent(BaseAgent):
 
             ### NOTES FOR ADDITIONAL LOGIC TO ADD:
             # start adding in logic based on absolute position using the minimap instead of relative position using the screen - need this for gas mining and building locations
-            # rally marines to front of base using height map
+                # all build screen actions should have a check to make sure the screen is centered in the correct spot
             # once number of marines exceeds threshold... ATTACK!
+            # build supply depots based on food growth per step
 
-            # set control group for command center to 5 and define initial command center location
+            # set control group for command center to 5, define initial command center location, and assess minimap heights
             if ((obs.observation["control_groups"][5][0]) == 0):
                 if (_RALLY_WORKERS in obs.observation["available_actions"]):
                     base_y, base_x = (obs.observation["minimap"][_MM_SELECTED] == 1).nonzero()
                     self.initial_base = [int(base_x.mean()), int(base_y.mean())]
+                    base_height = obs.observation["minimap"][_MM_HEIGHT][self.initial_base[1], self.initial_base[0]]
+                    height_map = obs.observation["minimap"][_MM_HEIGHT]
+                    heights, counts = np.unique(height_map[height_map > 0], return_counts=True)
+                    useful_heights = heights[np.argwhere(counts > (len(height_map.flatten()) * 0.05))].flatten()
+                    useful_heights = useful_heights[useful_heights.argsort()[::-1]]
+                    inbetween_heights = (height_map < useful_heights[np.argwhere(useful_heights == base_height)]) & (
+                        height_map > useful_heights[(np.argwhere(useful_heights == base_height) + 1)])
+                    ramp_y, ramp_x = (window_avg(inbetween_heights, 1) > 0.7).nonzero()
+                    ramp_inds = zip(ramp_y, ramp_x)
+                    ramp_ind_list = []
+                    for loc in ramp_inds:
+                        ramp_ind_list.append(np.asarray(loc))
+                    absolute_positions = []
+                    for ind in ramp_ind_list:
+                        surrounding = height_map[ind[0] - 1:ind[0] + 2, ind[1] - 1:ind[1] + 2]
+                        relative_y, relative_x = (surrounding == base_height).nonzero()
+                        relative = zip(relative_y - 1, relative_x - 1)
+                        for loc in relative:
+                            abs_pos = ind + loc
+                            absolute_positions.append(abs_pos)
+                    closest, min_dist = None, None
+                    for p in absolute_positions:
+                        dist = np.linalg.norm(np.array(self.initial_base) - np.array(p))
+                        if not min_dist or dist < min_dist:
+                            closest, min_dist = p, dist
+                    self.front_ramp = closest
                     print('set command center to control group 5')
                     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [5]])
                 else:
@@ -377,6 +409,8 @@ class TerranBasicAgent(BaseAgent):
                     print('select all barracks 621')
                     return actions.FunctionCall(_SELECT_POINT, [[2], self.barracks_locations[0]])
                 else:
+                    self.production_rally_set = False
+                    print('set barracks to control group 427')
                     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
 
             if (obs.observation["control_groups"][4][1] < self.barracks_built) & (self.barracks_built > 1) & \
@@ -389,7 +423,14 @@ class TerranBasicAgent(BaseAgent):
                             print('select all barracks 636')
                             return actions.FunctionCall(_SELECT_POINT, [[2], self.barracks_locations[0]])
                         else:
+                            self.production_rally_set = False
+                            print('set barracks to control group 427')
                             return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
+
+            # rally barracks to nearest ramp
+            if (self.production_buildings_selected is True) & (self.production_rally_set is False):
+                self.production_rally_set = True
+                return actions.FunctionCall(_SMART_MINIMAP, [_NOT_QUEUED, [self.front_ramp[1], self.front_ramp[0]]])
 
             # train marines
             if (obs.observation["player"][3] < obs.observation["player"][4]) & (obs.observation["player"][1] >= 50) & (
@@ -415,11 +456,13 @@ class TerranBasicAgent(BaseAgent):
             if cycler == 0:
                 self.army_selected = False
                 self.builder_scvs_selected = False
+                self.production_buildings_selected = False
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [5]])
             elif cycler == 1:
                 if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
                         (self.initial_scv_loc is not None):
                     self.army_selected = False
+                    self.production_buildings_selected = False
                     unit_type = obs.observation["screen"][_UNIT_TYPE]
                     scv_observed = (unit_type == _SCV)
                     processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
@@ -432,8 +475,10 @@ class TerranBasicAgent(BaseAgent):
             elif cycler == 2:
                 self.army_selected = False
                 self.builder_scvs_selected = False
+                self.production_buildings_selected = True
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [4]])
             elif cycler == 3:
                 self.builder_scvs_selected = False
+                self.production_buildings_selected = False
                 self.army_selected = True
                 return actions.FunctionCall(_SELECT_ARMY, [_SELECT_ALL])
