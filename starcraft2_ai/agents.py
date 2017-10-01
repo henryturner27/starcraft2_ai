@@ -125,6 +125,7 @@ class TerranBasicAgent(BaseAgent):
         self.barracks_built = 0
         self.freeze_barracks_selection = 0
         self.building_locations = []
+        self.supply_depot_locations = []
         self.barracks_locations = []
 
     def step(self, obs):
@@ -133,8 +134,7 @@ class TerranBasicAgent(BaseAgent):
         while True:
 
             ### NOTES FOR ADDITIONAL LOGIC TO ADD:
-            # ARE X AND Y COORDS BEING ASSIGNED INCORRECTLY?
-            # start adding in logic based on absolute position using the minimap instead of relative position using the screen
+            # start adding in logic based on absolute position using the minimap instead of relative position using the screen - need this for gas mining and building locations
             # rally marines to front of base using height map
             # once number of marines exceeds threshold... ATTACK!
 
@@ -217,18 +217,29 @@ class TerranBasicAgent(BaseAgent):
                 ####testing blocking out known placements
                 for building in self.building_locations:
                     background[
-                    np.clip(building[0] - 5, 0, len(background)):np.clip(building[0] + 5, 0, len(background)),
-                    np.clip(building[1] - 5, 0, len(background)):np.clip(building[1] + 5, 0, len(background))] = 0
-                ####
-                ####random placement
-                processed_freespace_x, processed_freespace_y = (window_avg(background, 7) > 0.99).nonzero()
-                random_placement = np.random.choice(range(len(processed_freespace_x)))
-                freespace = [int(processed_freespace_x[random_placement]), int(processed_freespace_y[random_placement])]
-                ####
-                ####fixed placement
-                # freespace = np.unravel_index(window_avg(background, 7).argmax(), (84, 84))
-                ####
+                    np.clip(building[1] - 5, 0, len(background)):np.clip(building[1] + 5, 0, len(background)),
+                    np.clip(building[0] - 5, 0, len(background)):np.clip(building[0] + 5, 0, len(background))] = 0
+                freespace = None
+                if len(self.supply_depot_locations) == 0:
+                    #### random placement
+                    processed_freespace_y, processed_freespace_x = (window_avg(background, 7) > 0.99).nonzero()
+                    random_placement = np.random.choice(range(len(processed_freespace_x)))
+                    freespace = [int(processed_freespace_x[random_placement]), int(processed_freespace_y[random_placement])]
+                else:
+                    #### nearby placement
+                    processed_freespace_y, processed_freespace_x = (window_avg(background, 7) > 0.99).nonzero()
+                    zipped_freespace = zip(processed_freespace_x, processed_freespace_y)
+                    freespace_locations = []
+                    for location in zipped_freespace:
+                        freespace_locations.append(location)
+                    closest, min_dist = None, None
+                    for p in freespace_locations:
+                        dist = np.linalg.norm(np.array(self.barracks_locations[-1]) - np.array(p))
+                        if not min_dist or dist < min_dist:
+                            closest, min_dist = p, dist
+                    freespace = closest
                 self.freeze_sd_building = self.steps
+                self.supply_depot_locations.append(freespace)
                 self.building_locations.append(freespace)
                 print('build supply depot 544')
                 return actions.FunctionCall(_BUILD_SUPPLY_DEPOT, [[0], freespace])
@@ -328,17 +339,27 @@ class TerranBasicAgent(BaseAgent):
                 background = (player_relative == 0)
                 for building in self.building_locations:
                     background[
-                    np.clip(building[0] - 7, 0, len(background)):np.clip(building[0] + 7, 0, len(background)),
-                    np.clip(building[1] - 7, 0, len(background)):np.clip(building[1] + 7, 0, len(background))] = 0
-                ####
-                ####random placement
-                processed_freespace_x, processed_freespace_y = (window_avg(background, 7) > 0.99).nonzero()
-                random_placement = np.random.choice(range(len(processed_freespace_x)))
-                freespace = [int(processed_freespace_x[random_placement]), int(processed_freespace_y[random_placement])]
-                ####
-                ####fixed placement
-                # freespace = np.unravel_index(window_avg(background, 7).argmax(), (84, 84))
-                ####
+                    np.clip(building[1] - 7, 0, len(background)):np.clip(building[1] + 7, 0, len(background)),
+                    np.clip(building[0] - 7, 0, len(background)):np.clip(building[0] + 7, 0, len(background))] = 0
+                freespace = None
+                if len(self.barracks_locations) == 0:
+                    #### random placement
+                    processed_freespace_y, processed_freespace_x = (window_avg(background, 7) > 0.99).nonzero()
+                    random_placement = np.random.choice(range(len(processed_freespace_x)))
+                    freespace = [int(processed_freespace_x[random_placement]), int(processed_freespace_y[random_placement])]
+                else:
+                    #### nearby same building placement
+                    processed_freespace_y, processed_freespace_x = (window_avg(background, 7) > 0.99).nonzero()
+                    zipped_freespace = zip(processed_freespace_x, processed_freespace_y)
+                    freespace_locations = []
+                    for location in zipped_freespace:
+                        freespace_locations.append(location)
+                    closest, min_dist = None, None
+                    for p in freespace_locations:
+                        dist = np.linalg.norm(np.array(self.barracks_locations[-1]) - np.array(p))
+                        if not min_dist or dist < min_dist:
+                            closest, min_dist = p, dist
+                    freespace = closest
                 self.building_locations.append(freespace)
                 self.barracks_locations.append(freespace)
                 self.freeze_barracks_selection = self.steps
