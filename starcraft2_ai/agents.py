@@ -37,6 +37,7 @@ _MOVE_CAMERA = actions.FUNCTIONS.move_camera.id
 _MOVE_SCREEN = actions.FUNCTIONS.Move_screen.id
 _SMART_SCREEN = actions.FUNCTIONS.Smart_screen.id
 _ATTACK_SCREEN = actions.FUNCTIONS.Attack_screen.id
+_ATTACK_MINIMAP = actions.FUNCTIONS.Attack_minimap.id
 _SELECT_IDLE_WORKER = actions.FUNCTIONS.select_idle_worker.id
 _SELECT_ARMY = actions.FUNCTIONS.select_army.id
 _HARVEST_GATHER_SCREEN = actions.FUNCTIONS.Harvest_Gather_screen.id
@@ -107,11 +108,18 @@ class TerranBasicAgent(BaseAgent):
     """An agent that plays Terran and builds marines."""
 
     def reset(self):
+        self.base_height = None
+        self.useful_heights = None
+        self.possible_enemy_locs = None
+        self.enemy_base_loc = None
+        self.command_center_selected = False
         self.builder_scvs_selected = False
         self.army_selected = False
         self.production_buildings_selected = False
+        self.scout_selected = False
         self.initial_base = None
         self.initial_scv_loc = None
+        self.scout_sent = False
         self.first_refinery_location = None
         self.second_refinery_location = None
         self.refineries_built = 0
@@ -128,6 +136,8 @@ class TerranBasicAgent(BaseAgent):
         self.barracks_to_build = 3
         self.barracks_built = 0
         self.freeze_barracks_selection = 0
+        self.freeze_enemy_base_loc = 0
+        self.freeze_attack = 0
         self.building_locations = []
         self.supply_depot_locations = []
         self.barracks_locations = []
@@ -141,6 +151,7 @@ class TerranBasicAgent(BaseAgent):
             ### NOTES FOR ADDITIONAL LOGIC TO ADD:
             # start adding in logic based on absolute position using the minimap instead of relative position using the screen - need this for gas mining and building locations
                 # all build screen actions should have a check to make sure the screen is centered in the correct spot
+            # send a scout
             # once number of marines exceeds threshold... ATTACK!
             # build supply depots based on food growth per step
 
@@ -149,13 +160,13 @@ class TerranBasicAgent(BaseAgent):
                 if (_RALLY_WORKERS in obs.observation["available_actions"]):
                     base_y, base_x = (obs.observation["minimap"][_MM_SELECTED] == 1).nonzero()
                     self.initial_base = [int(base_x.mean()), int(base_y.mean())]
-                    base_height = obs.observation["minimap"][_MM_HEIGHT][self.initial_base[1], self.initial_base[0]]
+                    self.base_height = obs.observation["minimap"][_MM_HEIGHT][self.initial_base[1], self.initial_base[0]]
                     height_map = obs.observation["minimap"][_MM_HEIGHT]
                     heights, counts = np.unique(height_map[height_map > 0], return_counts=True)
-                    useful_heights = heights[np.argwhere(counts > (len(height_map.flatten()) * 0.05))].flatten()
-                    useful_heights = useful_heights[useful_heights.argsort()[::-1]]
-                    inbetween_heights = (height_map < useful_heights[np.argwhere(useful_heights == base_height)]) & (
-                        height_map > useful_heights[(np.argwhere(useful_heights == base_height) + 1)])
+                    self.useful_heights = heights[np.argwhere(counts > (len(height_map.flatten()) * 0.05))].flatten()
+                    self.useful_heights = self.useful_heights[self.useful_heights.argsort()[::-1]]
+                    inbetween_heights = (height_map < self.useful_heights[np.argwhere(self.useful_heights == self.base_height)]) & (
+                        height_map > self.useful_heights[(np.argwhere(self.useful_heights == self.base_height) + 1)])
                     ramp_y, ramp_x = (window_avg(inbetween_heights, 1) > 0.7).nonzero()
                     ramp_inds = zip(ramp_y, ramp_x)
                     ramp_ind_list = []
@@ -164,7 +175,7 @@ class TerranBasicAgent(BaseAgent):
                     absolute_positions = []
                     for ind in ramp_ind_list:
                         surrounding = height_map[ind[0] - 1:ind[0] + 2, ind[1] - 1:ind[1] + 2]
-                        relative_y, relative_x = (surrounding == base_height).nonzero()
+                        relative_y, relative_x = (surrounding == self.base_height).nonzero()
                         relative = zip(relative_y - 1, relative_x - 1)
                         for loc in relative:
                             abs_pos = ind + loc
@@ -215,7 +226,6 @@ class TerranBasicAgent(BaseAgent):
                     return actions.FunctionCall(_MOVE_CAMERA, [self.initial_scv_loc])
                 if (self.idle_worker_selected) & \
                         (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1):
-
                     self.idle_worker_selected = False
                     unit_type = obs.observation["screen"][_UNIT_TYPE]
                     minerals_observed = (unit_type == _MINERAL_FIELD)
@@ -238,6 +248,73 @@ class TerranBasicAgent(BaseAgent):
                                 (obs.observation["player"][6]) + len(obs.observation["build_queue"]) < 22):
                     print('train scv 425')
                     return actions.FunctionCall(_TRAIN_SCV, [_NOT_QUEUED])
+
+            # set scout to control group
+            if obs.observation["control_groups"][3][1] < 1:
+                if len(obs.observation["multi_select"]) > 1:
+                    for ind, unit in enumerate(obs.observation["multi_select"]):
+                        if unit[0] == _SCV:
+                            self.builder_scvs_selected = False
+                            self.scout_selected = True
+                            print('select one unit 254')
+                            return actions.FunctionCall(_SELECT_UNIT, [[0], [ind]])
+                elif (self.scout_selected is True):
+                    if obs.observation["control_groups"][3][1] < 1:
+                        print('set scv scout to control group 258')
+                        return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [3]])
+                else:
+                    if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
+                            (self.initial_scv_loc is not None):
+                        self.scout_selected = False
+                        unit_type = obs.observation["screen"][_UNIT_TYPE]
+                        scv_observed = (unit_type == _SCV)
+                        processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
+                        scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
+                        scv_mass_bottom_right = [processed_neutral_x.mean() + 5, processed_neutral_y.mean() + 5]
+                        self.builder_scvs_selected = True
+                        print('select some scvs 300')
+                        return actions.FunctionCall(_SELECT_SCREEN,
+                                                    [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
+                    else:
+                        print('move camera to base 304')
+                        return actions.FunctionCall(_MOVE_CAMERA, [self.initial_scv_loc])
+
+            # send scout
+            if (self.enemy_base_loc is None) & (self.scout_selected is True) & \
+                    (self.steps > self.freeze_enemy_base_loc):
+                if self.possible_enemy_locs is None:
+                    self.possible_enemy_locs = {}
+                    height_map = obs.observation["minimap"][_MM_HEIGHT]
+                    mineral_map = obs.observation["minimap"][_MM_PLAYER_RELATIVE]
+                    matching_loc_y, matching_loc_x = (window_avg(((height_map == self.base_height) & (mineral_map == _PLAYER_NEUTRAL)), 1) > 0.3).nonzero()
+                    zipped_locs = zip(matching_loc_x, matching_loc_y)
+                    for p in zipped_locs:
+                        dist = np.linalg.norm(np.array(self.initial_base) - np.array(p))
+                        if dist > 10:
+                            self.possible_enemy_locs[p] = dist
+                    closest, min_dist = None, None
+                    for loc, dist in self.possible_enemy_locs.items():
+                        if (closest is None) or (dist < min_dist):
+                            min_dist = dist
+                            closest = loc
+                    self.possible_enemy_locs.pop(closest, None)
+                    print('move scout to closest base 275')
+                    return actions.FunctionCall(_SMART_MINIMAP, [_NOT_QUEUED, closest])
+                elif len(self.possible_enemy_locs) > 0:
+                    closest, min_dist = None, None
+                    for loc, dist in self.possible_enemy_locs.items():
+                        if (closest is None) or (dist < min_dist):
+                            min_dist = dist
+                            closest = loc
+                    self.possible_enemy_locs.pop(closest, None)
+                    return actions.FunctionCall(_SMART_MINIMAP, [_QUEUED, closest])
+                elif len(self.possible_enemy_locs) == 0:
+                    player_relative = obs.observation["minimap"][_MM_PLAYER_RELATIVE]
+                    enemy_y, enemy_x = (player_relative == _PLAYER_HOSTILE).nonzero()
+                    if len(enemy_y) == 0:
+                        self.freeze_enemy_base_loc = self.steps + 50
+                    else:
+                        self.enemy_base_loc = [int(enemy_x.mean()), int(enemy_y.mean())]
 
             # build supply depots
             if ((obs.observation["player"][4] - obs.observation["player"][3]) <= 3) & \
@@ -430,6 +507,7 @@ class TerranBasicAgent(BaseAgent):
             # rally barracks to nearest ramp
             if (self.production_buildings_selected is True) & (self.production_rally_set is False):
                 self.production_rally_set = True
+                print('rally production buildings to front ramp 504')
                 return actions.FunctionCall(_SMART_MINIMAP, [_NOT_QUEUED, [self.front_ramp[1], self.front_ramp[0]]])
 
             # train marines
@@ -445,22 +523,34 @@ class TerranBasicAgent(BaseAgent):
                 else:
                     return actions.FunctionCall(_NO_OP, [])
 
+            # if army count is over 25 then attack
+            if (self.army_selected is True) & (obs.observation["player"][8] > 25) & (self.steps > self.freeze_attack):
+                self.freeze_attack = self.steps + 150
+                print('attack enemy base 521')
+                return actions.FunctionCall(_ATTACK_MINIMAP, [_NOT_QUEUED, self.enemy_base_loc])
+
             # if nothing to do then cycle through control groups, workers, and army
             cgs = 2
             if obs.observation["control_groups"][4][1] > 0:
-                cgs = 3
-            if obs.observation["player"][8] > 0:
-                cgs = 4
+                cgs += 1
+            if obs.observation["player"][8] > 1:
+                cgs += 1
+            if obs.observation["control_groups"][3][1] > 0:
+                cgs += 1
             cycler = self.steps % cgs
 
             if cycler == 0:
+                self.scout_selected = False
                 self.army_selected = False
                 self.builder_scvs_selected = False
                 self.production_buildings_selected = False
+                self.command_center_selected = True
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [5]])
             elif cycler == 1:
                 if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
                         (self.initial_scv_loc is not None):
+                    self.command_center_selected = False
+                    self.scout_selected = False
                     self.army_selected = False
                     self.production_buildings_selected = False
                     unit_type = obs.observation["screen"][_UNIT_TYPE]
@@ -473,11 +563,22 @@ class TerranBasicAgent(BaseAgent):
                 else:
                     return actions.FunctionCall(_MOVE_CAMERA, [self.initial_scv_loc])
             elif cycler == 2:
+                self.command_center_selected = False
+                self.army_selected = False
+                self.builder_scvs_selected = False
+                self.production_buildings_selected = False
+                self.scout_selected = True
+                return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [3]])
+            elif cycler == 3:
+                self.command_center_selected = False
+                self.scout_selected = False
                 self.army_selected = False
                 self.builder_scvs_selected = False
                 self.production_buildings_selected = True
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [4]])
-            elif cycler == 3:
+            elif cycler == 4:
+                self.command_center_selected = False
+                self.scout_selected = False
                 self.builder_scvs_selected = False
                 self.production_buildings_selected = False
                 self.army_selected = True
