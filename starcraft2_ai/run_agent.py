@@ -30,7 +30,7 @@ class RunAgent(object):
                 screen_size_px=(84, 84),
                 minimap_size_px=(64, 64),
                 agent_race='T',
-                save_replay_steps=steps * step_mul,
+                save_replay_episodes=1,
                 visualize=True,
                 replay_dir=self.replay_dir + self.map_name,
                 step_mul=step_mul,

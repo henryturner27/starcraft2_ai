@@ -46,6 +46,7 @@ _BUILD_SUPPLY_DEPOT = actions.FUNCTIONS.Build_SupplyDepot_screen.id
 _BUILD_BARRACKS = actions.FUNCTIONS.Build_Barracks_screen.id
 _RALLY_WORKERS = actions.FUNCTIONS.Rally_Workers_screen.id
 _SMART_MINIMAP = actions.FUNCTIONS.Smart_minimap.id
+_MOVE_MINIMAP = actions.FUNCTIONS.Move_minimap.id
 _TRAIN_SCV = actions.FUNCTIONS.Train_SCV_quick.id
 _TRAIN_MARINE = actions.FUNCTIONS.Train_Marine_quick.id
 _QUEUED = [1]
@@ -299,7 +300,7 @@ class TerranBasicAgent(BaseAgent):
                             closest = loc
                     self.possible_enemy_locs.pop(closest, None)
                     print('move scout to closest base 275')
-                    return actions.FunctionCall(_SMART_MINIMAP, [_NOT_QUEUED, closest])
+                    return actions.FunctionCall(_MOVE_MINIMAP, [_NOT_QUEUED, closest])
                 elif len(self.possible_enemy_locs) > 0:
                     closest, min_dist = None, None
                     for loc, dist in self.possible_enemy_locs.items():
@@ -307,7 +308,7 @@ class TerranBasicAgent(BaseAgent):
                             min_dist = dist
                             closest = loc
                     self.possible_enemy_locs.pop(closest, None)
-                    return actions.FunctionCall(_SMART_MINIMAP, [_QUEUED, closest])
+                    return actions.FunctionCall(_MOVE_MINIMAP, [_QUEUED, closest])
                 elif len(self.possible_enemy_locs) == 0:
                     player_relative = obs.observation["minimap"][_MM_PLAYER_RELATIVE]
                     enemy_y, enemy_x = (player_relative == _PLAYER_HOSTILE).nonzero()
