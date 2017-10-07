@@ -80,7 +80,7 @@ class GameController(object):
                 replay_data=replay_data,
                 map_data=self._map_data,
                 options=self._config.interface,
-                disable_fog=False,
+                disable_fog=True,
                 observed_player_id=self._config.player_id)
         self._controller.start_replay(start_replay)
 
@@ -125,17 +125,21 @@ class GetObsAndActs(object):
             if o.player_result:
                 break
 
-            if o.actions:
-                action = f.reverse_action(o.actions[0])
-            else:
-                action = 'no action'
+            available_actions = f.available_actions(o.observation)
+            exec_actions = []
+            for ac in o.actions:
+                try:
+                    action = f.reverse_action(ac)
+                except ValueError:
+                    action = features.actions.FunctionCall(0, [])  # no_op
+                exec_actions.append(action)
 
             step = o.observation.game_loop
 
-            unit_type = obs['screen'][config.unit_type_id]
-            unit_type_frame = np.asarray(unit_type)
+            screen_unit_type = obs['screen'][config.unit_type_id]
+            screen_unit_type_frame = np.asarray(screen_unit_type)
 
-            rl_data.append([step, unit_type_frame, action])
+            rl_data.append([step, available_actions, screen_unit_type_frame, exec_actions])
 
             controller.step()
 
@@ -155,4 +159,4 @@ class GetObsAndActs(object):
 
 if __name__ == '__main__':
     GetObsAndActs(
-        map_name='Simple128', replay_file='Simple128_2017-09-16-19-37-07.SC2Replay').do_it()
+        map_name='Simple128', replay_file='Simple128_2017-10-07-20-54-57.SC2Replay').do_it()
