@@ -29,7 +29,25 @@ class Config(object):
         self.replay_name = map_name + '/' + replay_file
         self.player_id = 1
         self.map_name = map_name
-        self.unit_type_id = features.SCREEN_FEATURES.unit_type.index
+        self.screen_unit_type_id = features.SCREEN_FEATURES.unit_type.index
+        self.screen_height_map_id = features.SCREEN_FEATURES.height_map.index
+        self.screen_visibility_id = features.SCREEN_FEATURES.visibility_map.index
+        self.screen_creep_id = features.SCREEN_FEATURES.creep.index
+        self.screen_power_id = features.SCREEN_FEATURES.power.index
+        self.screen_player_id = features.SCREEN_FEATURES.player_id.index
+        self.screen_player_relative_id = features.SCREEN_FEATURES.player_relative.index
+        self.screen_selected_id = features.SCREEN_FEATURES.selected.index
+        self.screen_hit_points_id = features.SCREEN_FEATURES.unit_hit_points.index
+        self.screen_energy_id = features.SCREEN_FEATURES.unit_energy.index
+        self.screen_shields_id = features.SCREEN_FEATURES.unit_shields.index
+        self.screen_unit_density_id = features.SCREEN_FEATURES.unit_density.index
+        self.mm_height_map_id = features.MINIMAP_FEATURES.height_map.index
+        self.mm_visibility_id = features.MINIMAP_FEATURES.visibility_map.index
+        self.mm_creep_id = features.MINIMAP_FEATURES.creep.index
+        self.mm_camera_id = features.MINIMAP_FEATURES.camera.index
+        self.mm_player_id =features.MINIMAP_FEATURES.player_id.index
+        self.mm_player_relative_id = features.MINIMAP_FEATURES.player_relative.index
+        self.mm_selected_id = features.MINIMAP_FEATURES.selected.index
         self.screen_size_px = (84, 84)
         self.minimap_size_px = (64, 64)
         self.camera_width = 24
@@ -136,10 +154,66 @@ class GetObsAndActs(object):
 
             step = o.observation.game_loop
 
-            screen_unit_type = obs['screen'][config.unit_type_id]
+            screen_unit_type = obs['screen'][config.screen_unit_type_id]
             screen_unit_type_frame = np.asarray(screen_unit_type)
+            screen_height_map = obs['screen'][config.screen_height_map_id]
+            screen_height_map_frame = np.asarray(screen_height_map)
+            screen_visibility = obs['screen'][config.screen_visibility_id]
+            screen_visibility_frame = np.asarray(screen_visibility)
+            screen_creep = obs['screen'][config.screen_creep_id]
+            creep_frame = np.asarray(screen_creep)
+            screen_power = obs['screen'][config.screen_power_id]
+            screen_power_frame = np.asarray(screen_power)
+            screen_player_id = obs['screen'][config.screen_player_id]
+            screen_player_id_frame = np.asarray(screen_player_id)
+            screen_player_relative = obs['screen'][config.screen_player_relative_id]
+            screen_player_relative_frame = np.asarray(screen_player_relative)
+            screen_selected = obs['screen'][config.screen_selected_id]
+            screen_selected_frame = np.asarray(screen_selected)
+            screen_hit_points = obs['screen'][config.screen_hit_points_id]
+            screen_hit_points_frame = np.asarray(screen_hit_points)
+            screen_energy = obs['screen'][config.screen_energy_id]
+            screen_energy_frame = np.asarray(screen_energy)
+            screen_shields = obs['screen'][config.screen_shields_id]
+            screen_shields_frame = np.asarray(screen_shields)
+            screen_unit_density = obs['screen'][config.screen_unit_density_id]
+            screen_unit_density_frame = np.asarray(screen_unit_density)
 
-            rl_data.append([step, available_actions, screen_unit_type_frame, exec_actions])
+            mm_height_map = obs['minimap'][config.mm_height_map_id]
+            mm_height_map_frame = np.asarray(mm_height_map)
+            mm_visibility = obs['minimap'][config.mm_visibility_id]
+            mm_visibility_frame = np.asarray(mm_visibility)
+            mm_creep = obs['minimap'][config.mm_creep_id]
+            mm_creep_frame = np.asarray(mm_creep)
+            mm_camera = obs['minimap'][config.mm_camera_id]
+            mm_camera_frame = np.asarray(mm_camera)
+            mm_player_id = obs['minimap'][config.mm_player_id]
+            mm_player_id_frame = np.asarray(mm_player_id)
+            mm_player_relative = obs['minimap'][config.mm_player_relative_id]
+            mm_player_relative_frame = np.asarray(mm_player_relative)
+            mm_selected = obs['minimap'][config.mm_selected_id]
+            mm_selected_frame = np.asarray(mm_selected)
+
+            player_minerals = obs['player'][1]
+            player_gas = obs['player'][2]
+            player_food_used = obs['player'][3]
+            player_food_cap = obs['player'][4]
+            player_food_used_by_army = obs['player'][5]
+            player_food_used_by_workers = obs['player'][6]
+            player_idle_worker_count = obs['player'][7]
+            player_army_count = obs['player'][8]
+            player_warp_gate_count = obs['player'][9]
+            player_larva_count = obs['player'][10]
+
+            rl_data.append([step, available_actions, screen_unit_type_frame, screen_height_map_frame,
+                            screen_visibility_frame, creep_frame, screen_power_frame, screen_player_id_frame,
+                            screen_player_relative_frame, screen_selected_frame, screen_hit_points_frame,
+                            screen_energy_frame, screen_shields_frame, screen_unit_density_frame,
+                            mm_height_map_frame, mm_visibility_frame, mm_creep_frame, mm_camera_frame,
+                            mm_player_id_frame, mm_player_relative_frame, mm_selected_frame,
+                            player_minerals, player_gas, player_food_used, player_food_cap, player_food_used_by_army,
+                            player_food_used_by_workers, player_idle_worker_count, player_army_count,
+                            player_warp_gate_count, player_larva_count, exec_actions])
 
             controller.step()
 
