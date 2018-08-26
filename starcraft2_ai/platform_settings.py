@@ -1,5 +1,5 @@
 from platform import system
-from os import getlogin
+from os import getlogin, environ, makedirs
 import json
 
 replay_dir = None
