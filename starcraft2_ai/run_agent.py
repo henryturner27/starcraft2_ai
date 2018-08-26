@@ -27,7 +27,6 @@ class RunAgent(object):
         step_mul = 8
         with sc2_env.SC2Env(
                 map_name=self.map_name,
-                agent_race='T',
                 save_replay_episodes=1,
                 visualize=True,
                 replay_dir=self.replay_dir + self.map_name,
@@ -38,4 +37,4 @@ class RunAgent(object):
 
 
 if __name__ == "__main__":
-    RunAgent(map_name='Simple128', agent=agents.TerranBasicAgent()).run_agent()
+    RunAgent(map_name='Simple128', players=agents.TerranBasicAgent()).run_agent()
