@@ -18,5 +18,5 @@ elif system() == 'Darwin':
     dropbox_json_file.close()
 else:
 	print('Not using Windows or Mac OS')
-	os.makedirs(str(os.environ('HOME') + '/replay_data'), exist_ok=True)
-	replay_dir = str(os.environ('HOME') + '/replay_data')
+	makedirs(str(environ('HOME') + '/replay_data'), exist_ok=True)
+	replay_dir = str(environ('HOME') + '/replay_data')
