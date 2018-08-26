@@ -27,8 +27,6 @@ class RunAgent(object):
         step_mul = 8
         with sc2_env.SC2Env(
                 map_name=self.map_name,
-                screen_size_px=(84, 84),
-                minimap_size_px=(64, 64),
                 agent_race='T',
                 save_replay_episodes=1,
                 visualize=True,
