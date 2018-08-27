@@ -200,7 +200,7 @@ class CollectMinerals(BaseAgent):
             if _SELECT_IDLE_WORKER not in obs.observation["available_actions"]:
                 if not self.rally_set:
                     if _RALLY_WORKERS not in obs.observation["available_actions"]:
-                        unit_type = obs.observation["screen"][_UNIT_TYPE]
+                        unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                         command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
                         command_center = [int(command_center_x.mean()), int(command_center_y.mean())]
                         return actions.FunctionCall(_SELECT_POINT,
@@ -222,7 +222,7 @@ class CollectMinerals(BaseAgent):
                             return actions.FunctionCall(_NO_OP, [])
                         else:
                             return actions.FunctionCall(_TRAIN_SCV, [_NOT_QUEUED])
-            unit_type = obs.observation["screen"][_UNIT_TYPE]
+            unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
             minerals_observed = (unit_type == _MINERAL_FIELD)
             processed_neutral_y, processed_neutral_x = (window_avg(minerals_observed, 2) > 0.99).nonzero()
             command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
