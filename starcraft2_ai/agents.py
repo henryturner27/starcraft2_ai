@@ -159,10 +159,10 @@ class TerranBasicAgent(BaseAgent):
             # set control group for command center to 5, define initial command center location, and assess minimap heights
             if ((obs.observation["control_groups"][5][0]) == 0):
                 if (_RALLY_WORKERS in obs.observation["available_actions"]):
-                    base_y, base_x = (obs.observation["minimap"][_MM_SELECTED] == 1).nonzero()
+                    base_y, base_x = (obs.observation["feature_minimap"][_MM_SELECTED] == 1).nonzero()
                     self.initial_base = [int(base_x.mean()), int(base_y.mean())]
-                    self.base_height = obs.observation["minimap"][_MM_HEIGHT][self.initial_base[1], self.initial_base[0]]
-                    height_map = obs.observation["minimap"][_MM_HEIGHT]
+                    self.base_height = obs.observation["feature_minimap"][_MM_HEIGHT][self.initial_base[1], self.initial_base[0]]
+                    height_map = np.asarray(obs.observation["feature_minimap"][_MM_HEIGHT])
                     heights, counts = np.unique(height_map[height_map > 0], return_counts=True)
                     self.useful_heights = heights[np.argwhere(counts > (len(height_map.flatten()) * 0.05))].flatten()
                     self.useful_heights = self.useful_heights[self.useful_heights.argsort()[::-1]]
@@ -197,19 +197,20 @@ class TerranBasicAgent(BaseAgent):
                     return actions.FunctionCall(_SELECT_POINT, [_NOT_QUEUED, [command_center[0], command_center[1]]])
 
             # define initial scv location
-            if (obs.observation["minimap"][_MM_CAMERA][self.initial_base[1], self.initial_base[0]] == 1) & \
+            if (obs.observation["feature_minimap"][_MM_CAMERA][self.initial_base[1], self.initial_base[0]] == 1) & \
                     (self.initial_scv_loc is None):
                 if len(obs.observation["multi_select"]) < 2:
                     unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     scv_observed = (unit_type == _SCV)
-                    processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
-                    scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
+                    processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.4).nonzero()
+                    scv_mass_top_left = [np.clip(processed_neutral_x.mean() - 5, 0, None), np.clip(processed_neutral_y.mean() - 5, 0, None)]
                     scv_mass_bottom_right = [processed_neutral_x.mean() + 5, processed_neutral_y.mean() + 5]
                     self.builder_scvs_selected = True
+                    print(scv_mass_top_left, scv_mass_bottom_right)
                     print('select some scvs 162')
                     return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
                 else:
-                    selected_scvs = obs.observation["minimap"][_MM_SELECTED]
+                    selected_scvs = obs.observation["feature_minimap"][_MM_SELECTED]
                     selected_scv_y, selected_scv_x = (selected_scvs == 1).nonzero()
                     selected_scv_x = selected_scv_x.mean()
                     selected_scv_y = selected_scv_y.mean()
@@ -222,11 +223,11 @@ class TerranBasicAgent(BaseAgent):
                     self.idle_worker_selected = True
                     print('select idle worker 198')
                     return actions.FunctionCall(_SELECT_IDLE_WORKER, [_NOT_QUEUED])
-                if obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] != 1:
+                if obs.observation["feature_minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] != 1:
                     print('move camera to scv line 159')
                     return actions.FunctionCall(_MOVE_CAMERA, [self.initial_scv_loc])
                 if (self.idle_worker_selected) & \
-                        (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1):
+                        (obs.observation["feature_minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1):
                     self.idle_worker_selected = False
                     unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     minerals_observed = (unit_type == _MINERAL_FIELD)
@@ -264,7 +265,7 @@ class TerranBasicAgent(BaseAgent):
                         print('set scv scout to control group 258')
                         return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [3]])
                 else:
-                    if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
+                    if (obs.observation["feature_minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
                             (self.initial_scv_loc is not None):
                         self.scout_selected = False
                         unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
@@ -285,8 +286,8 @@ class TerranBasicAgent(BaseAgent):
                     (self.steps > self.freeze_enemy_base_loc):
                 if self.possible_enemy_locs is None:
                     self.possible_enemy_locs = {}
-                    height_map = obs.observation["minimap"][_MM_HEIGHT]
-                    mineral_map = obs.observation["minimap"][_MM_PLAYER_RELATIVE]
+                    height_map = obs.observation["feature_minimap"][_MM_HEIGHT]
+                    mineral_map = obs.observation["feature_minimap"][_MM_PLAYER_RELATIVE]
                     matching_loc_y, matching_loc_x = (window_avg(((height_map == self.base_height) & (mineral_map == _PLAYER_NEUTRAL)), 1) > 0.3).nonzero()
                     zipped_locs = zip(matching_loc_x, matching_loc_y)
                     for p in zipped_locs:
@@ -310,7 +311,7 @@ class TerranBasicAgent(BaseAgent):
                     self.possible_enemy_locs.pop(closest, None)
                     return actions.FunctionCall(_MOVE_MINIMAP, [_QUEUED, closest])
                 elif len(self.possible_enemy_locs) == 0:
-                    player_relative = obs.observation["minimap"][_MM_PLAYER_RELATIVE]
+                    player_relative = obs.observation["feature_minimap"][_MM_PLAYER_RELATIVE]
                     enemy_y, enemy_x = (player_relative == _PLAYER_HOSTILE).nonzero()
                     if len(enemy_y) == 0:
                         self.freeze_enemy_base_loc = self.steps + 50
@@ -548,7 +549,7 @@ class TerranBasicAgent(BaseAgent):
                 self.command_center_selected = True
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [5]])
             elif cycler == 1:
-                if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
+                if (obs.observation["feature_minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
                         (self.initial_scv_loc is not None):
                     self.command_center_selected = False
                     self.scout_selected = False

@@ -4,7 +4,6 @@ from __future__ import print_function
 
 import starcraft2_ai.agents as agents
 import starcraft2_ai.platform_settings as platform_settings
-import collections
 from pysc2.env import run_loop
 from pysc2.env import sc2_env
 
@@ -23,7 +22,7 @@ def run_agent(map_name, agent):
             players=[sc2_env.Agent(sc2_env.Race.terran), sc2_env.Bot(sc2_env.Race.random, sc2_env.Difficulty.very_easy)],
             agent_interface_format=sc2_env.AgentInterfaceFormat(
                 feature_dimensions=sc2_env.Dimensions(
-                    screen=84,
+                    screen=64,
                     minimap=64)),
             visualize=True,
             step_mul=step_mul,
