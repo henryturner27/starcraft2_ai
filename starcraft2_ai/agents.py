@@ -206,7 +206,6 @@ class TerranBasicAgent(BaseAgent):
                     scv_mass_top_left = [np.clip(processed_neutral_x.mean() - 5, 0, None), np.clip(processed_neutral_y.mean() - 5, 0, None)]
                     scv_mass_bottom_right = [processed_neutral_x.mean() + 5, processed_neutral_y.mean() + 5]
                     self.builder_scvs_selected = True
-                    print(scv_mass_top_left, scv_mass_bottom_right)
                     print('select some scvs 162')
                     return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
                 else:
@@ -300,6 +299,7 @@ class TerranBasicAgent(BaseAgent):
                             min_dist = dist
                             closest = loc
                     self.possible_enemy_locs.pop(closest, None)
+                    print(closest)
                     print('move scout to closest base 275')
                     return actions.FunctionCall(_MOVE_MINIMAP, [_NOT_QUEUED, closest])
                 elif len(self.possible_enemy_locs) > 0:

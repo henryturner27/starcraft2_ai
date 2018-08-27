@@ -32,4 +32,4 @@ def run_agent(map_name, agent):
 
 if __name__ == "__main__":
     FLAGS(sys.argv)
-    run_agent(map_name='Simple128', agent=agents.TerranBasicAgent())
+    run_agent(map_name='Simple128', agent=agents.BaseAgent())
