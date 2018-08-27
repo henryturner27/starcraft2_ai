@@ -190,7 +190,7 @@ class TerranBasicAgent(BaseAgent):
                     print('set command center to control group 5')
                     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [5]])
                 else:
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
                     command_center = [int(command_center_x.mean()), int(command_center_y.mean())]
                     print('select point 179')
@@ -200,7 +200,7 @@ class TerranBasicAgent(BaseAgent):
             if (obs.observation["minimap"][_MM_CAMERA][self.initial_base[1], self.initial_base[0]] == 1) & \
                     (self.initial_scv_loc is None):
                 if len(obs.observation["multi_select"]) < 2:
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     scv_observed = (unit_type == _SCV)
                     processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
                     scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
@@ -228,7 +228,7 @@ class TerranBasicAgent(BaseAgent):
                 if (self.idle_worker_selected) & \
                         (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1):
                     self.idle_worker_selected = False
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     minerals_observed = (unit_type == _MINERAL_FIELD)
                     processed_neutral_y, processed_neutral_x = (window_avg(minerals_observed, 2) > 0.9).nonzero()
                     random_mineral_selection = np.random.choice(range(len(processed_neutral_x)))
@@ -267,7 +267,7 @@ class TerranBasicAgent(BaseAgent):
                     if (obs.observation["minimap"][_MM_CAMERA][self.initial_scv_loc[1], self.initial_scv_loc[0]] == 1) & \
                             (self.initial_scv_loc is not None):
                         self.scout_selected = False
-                        unit_type = obs.observation["screen"][_UNIT_TYPE]
+                        unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                         scv_observed = (unit_type == _SCV)
                         processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
                         scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
@@ -322,7 +322,7 @@ class TerranBasicAgent(BaseAgent):
                     (self.builder_scvs_selected is True) & (obs.observation["player"][1] >= 100) & \
                     ((self.steps >= self.freeze_sd_building + 150) | (len(self.building_locations) == 0)):
 
-                player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
+                player_relative = obs.observation["feature_screen"][_PLAYER_RELATIVE]
                 background = (player_relative == 0)
                 ####testing blocking out known placements
                 for building in self.building_locations:
@@ -357,7 +357,7 @@ class TerranBasicAgent(BaseAgent):
             # build refineries
             if ((obs.observation["player"][3]) >= 24) & (obs.observation["player"][1] >= 75) & \
                     (self.builder_scvs_selected is True) & (self.refineries_built < 2):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 gas_observed = (unit_type == _VESPENE_GEYSER)
                 processed_neutral_y, processed_neutral_x = (window_avg(gas_observed, 3) > 0.9).nonzero()
                 command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
@@ -379,7 +379,7 @@ class TerranBasicAgent(BaseAgent):
                 return actions.FunctionCall(_BUILD_REFINERY, [_NOT_QUEUED, self.gas_target])
             elif ((obs.observation["player"][3]) >= 18) & (obs.observation["player"][1] >= 75) & \
                 (self.builder_scvs_selected is True) & (self.refineries_built < 1):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 gas_observed = (unit_type == _VESPENE_GEYSER)
                 processed_neutral_y, processed_neutral_x = (window_avg(gas_observed, 3) > 0.99).nonzero()
                 command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
@@ -414,7 +414,7 @@ class TerranBasicAgent(BaseAgent):
             if (self.refineries_built == 1) & (self.workers_on_ref_one < 2) & (
                         _MOVE_SCREEN in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_ref_worker_assignment + 75):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
                 scv_mass = [processed_neutral_x.mean(), processed_neutral_y.mean()]
@@ -433,7 +433,7 @@ class TerranBasicAgent(BaseAgent):
             if (self.refineries_built == 2) & (self.workers_on_ref_two < 2) & (
                         _MOVE_SCREEN in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_ref_worker_assignment + 75):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
                 scv_mass = [processed_neutral_x.mean(), processed_neutral_y.mean()]
@@ -445,7 +445,7 @@ class TerranBasicAgent(BaseAgent):
                     (obs.observation["player"][1] >= 150) & (obs.observation["player"][3] >= 13) & \
                     (_BUILD_BARRACKS in obs.observation["available_actions"]) & (self.builder_scvs_selected is True):
 
-                player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
+                player_relative = obs.observation["feature_screen"][_PLAYER_RELATIVE]
                 background = (player_relative == 0)
                 for building in self.building_locations:
                     background[
@@ -554,7 +554,7 @@ class TerranBasicAgent(BaseAgent):
                     self.scout_selected = False
                     self.army_selected = False
                     self.production_buildings_selected = False
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     scv_observed = (unit_type == _SCV)
                     processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
                     scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]
