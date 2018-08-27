@@ -10,12 +10,12 @@ from pysc2.env import sc2_env
 import sys
 from absl import flags
 
-FLAGS = flags.FLAGS
-FLAGS(sys.argv)
-
 
 class AgentInstance(object):
     def __init__(self, map_name, agent):
+        FLAGS = flags.FLAGS
+        flags.DEFINE_string('f', '', 'kernel')
+        FLAGS(sys.argv)
         self.map_name = map_name
         self.agent = agent
 
