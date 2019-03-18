@@ -22,6 +22,8 @@ import numpy as np
 from pysc2.lib import actions
 from pysc2.lib import features
 
+FUNCTIONS = actions.FUNCTIONS
+
 _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
 _UNIT_TYPE = features.SCREEN_FEATURES.unit_type.index
 _UNIT_DENSITY = features.SCREEN_FEATURES.unit_density.index
@@ -239,13 +241,13 @@ class CollectMinerals(BaseAgent):
             if self.target == None:
                 self.target = [int(closest[0]), int(closest[1])]
             self.workers_mining = True
-            return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.target])
+            return FUNCTIONS.Harvest_Gather_screen([0], self.target)
         else:
             if not self.initial_worker_selection:
                 self.initial_worker_selection = True
-                return actions.FunctionCall(_SELECT_SCREEN, [[0], [0, 0], [83, 83]])
+                return FUNCTIONS.select_rect([0], [0,0], [83,83])
             else:
-                return actions.FunctionCall(_NO_OP, [])
+                return FUNCTIONS.no_op()
 
 
 class CollectMineralsAndGas(BaseAgent):
@@ -260,7 +262,7 @@ class CollectMineralsAndGas(BaseAgent):
 
             # set workers to mining
             if not self.workers_mining:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 minerals_observed = (unit_type == _MINERAL_FIELD)
                 processed_neutral_y, processed_neutral_x = (window_avg(minerals_observed, 2) > 0.99).nonzero()
                 command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
@@ -278,20 +280,19 @@ class CollectMineralsAndGas(BaseAgent):
                     self.target = [int(closest[0]), int(closest[1])]
                 self.workers_mining = True
                 print('smart screen 172')
-                return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.target])
-
+                return FUNCTIONS.Harvest_Gather_screen([0], self.target)
             # set rally for workers
             if not self.rally_set:
                 if _RALLY_WORKERS not in obs.observation["available_actions"]:
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
                     command_center = [int(command_center_x.mean()), int(command_center_y.mean())]
                     print('select point 179')
-                    return actions.FunctionCall(_SELECT_POINT, [_NOT_QUEUED, [command_center[0], command_center[1]]])
+                    return FUNCTIONS.select_point([0], command_center)
                 else:
                     self.rally_set = True
                     print('rally workers 182')
-                    return actions.FunctionCall(_RALLY_WORKERS, [_NOT_QUEUED, self.target])
+                    return FUNCTIONS.Rally_Workers_screen([0], self.target)
 
             # move idle workers back to mining minerals
             if _SELECT_IDLE_WORKER in obs.observation["available_actions"]:
@@ -302,7 +303,7 @@ class CollectMineralsAndGas(BaseAgent):
                 elif self.idle_worker_selected:
                     self.idle_worker_selected = False
                     print('smart screen 215')
-                    return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.target])
+                    return FUNCTIONS.Harvest_Gather_screen([0],self.target)
 
             # train SCVs
             if (obs.observation["player"][3] < obs.observation["player"][4]) & (obs.observation["player"][1] >= 50) & (
@@ -323,7 +324,7 @@ class CollectMineralsAndGas(BaseAgent):
                         obs.observation["player"][1] >= 100) & (
                         _BUILD_SUPPLY_DEPOT not in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_sd_building + 50):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
                 scv_mass_top_left = [processed_neutral_x.mean() - 3, processed_neutral_y.mean() - 3]
@@ -334,7 +335,7 @@ class CollectMineralsAndGas(BaseAgent):
                         obs.observation["player"][1] >= 100) & (
                 _BUILD_SUPPLY_DEPOT in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_sd_building + 50):
-                player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
+                player_relative = obs.observation["feature_screen"][_PLAYER_RELATIVE]
                 background = (player_relative == 0)
                 #### testing blocking out known placements
                 for building in self.building_locations:
@@ -359,7 +360,7 @@ class CollectMineralsAndGas(BaseAgent):
             # build refineries
             if ((obs.observation["player"][3]) >= 24) & (obs.observation["player"][1] >= 75) & (
                         _BUILD_REFINERY in obs.observation["available_actions"]) & (self.refineries_built < 2):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 gas_observed = (unit_type == _VESPENE_GEYSER)
                 processed_neutral_y, processed_neutral_x = (window_avg(gas_observed, 3) > 0.9).nonzero()
                 command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
@@ -381,7 +382,7 @@ class CollectMineralsAndGas(BaseAgent):
                 return actions.FunctionCall(_BUILD_REFINERY, [_NOT_QUEUED, self.gas_target])
             elif ((obs.observation["player"][3]) >= 18) & (obs.observation["player"][1] >= 75) & (
                         _BUILD_REFINERY in obs.observation["available_actions"]) & (self.refineries_built < 1):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 gas_observed = (unit_type == _VESPENE_GEYSER)
                 processed_neutral_y, processed_neutral_x = (window_avg(gas_observed, 3) > 0.99).nonzero()
                 command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
@@ -412,11 +413,11 @@ class CollectMineralsAndGas(BaseAgent):
                     self.workers_on_ref_one += 1
                     self.assigned_worker_to_gas = self.steps
                     print('set scv to refinery 290')
-                    return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.first_refinery_location])
+                    return FUNCTIONS.Harvest_Gather_screen([0], self.first_refinery_location)
             if (self.refineries_built == 1) & (self.workers_on_ref_one < 2) & (
                         _MOVE_SCREEN in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_ref_worker_assignment + 75):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
                 scv_mass = [processed_neutral_x.mean(), processed_neutral_y.mean()]
@@ -431,11 +432,11 @@ class CollectMineralsAndGas(BaseAgent):
                     self.workers_on_ref_two += 1
                     self.assigned_worker_to_gas = self.steps
                     print('set scv to refinery 300')
-                    return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.second_refinery_location])
+                    return FUNCTIONS.Harvest_Gather_screen([0], self.second_refinery_location)
             if (self.refineries_built == 2) & (self.workers_on_ref_two < 2) & (
                         _MOVE_SCREEN in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_ref_worker_assignment + 75):
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
                 scv_mass = [processed_neutral_x.mean(), processed_neutral_y.mean()]
@@ -445,12 +446,12 @@ class CollectMineralsAndGas(BaseAgent):
             # if nothing to do then cycle through buildings and workers
             _alternator = self.steps % 2
             if _alternator == 0:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
                 command_center = [int(command_center_x.mean()), int(command_center_y.mean())]
                 return actions.FunctionCall(_SELECT_POINT, [_NOT_QUEUED, [command_center[0], command_center[1]]])
             elif _alternator == 1:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
                 scv_mass_top_left = [processed_neutral_x.mean() - 3, processed_neutral_y.mean() - 3]
@@ -480,7 +481,7 @@ class BuildMarines(BaseAgent):
 
             # set workers to mining
             if not self.workers_mining:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 minerals_observed = (unit_type == _MINERAL_FIELD)
                 processed_neutral_y, processed_neutral_x = (window_avg(minerals_observed, 2) > 0.9).nonzero()
                 command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
@@ -498,12 +499,12 @@ class BuildMarines(BaseAgent):
                     self.target = [int(closest[0]), int(closest[1])]
                 self.workers_mining = True
                 print('smart screen 172')
-                return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.target])
+                return FUNCTIONS.Harvest_Gather_screen([0], self.target)
 
             # set rally for workers
             if not self.rally_set:
                 if _RALLY_WORKERS not in obs.observation["available_actions"]:
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
                     command_center = [int(command_center_x.mean()), int(command_center_y.mean())]
                     print('select point 179')
@@ -519,7 +520,7 @@ class BuildMarines(BaseAgent):
                     print('set command center to control group 5')
                     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [5]])
                 else:
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     command_center_y, command_center_x = (unit_type == _COMMAND_CENTER).nonzero()
                     command_center = [int(command_center_x.mean()), int(command_center_y.mean())]
                     print('select point 179')
@@ -534,7 +535,7 @@ class BuildMarines(BaseAgent):
                 elif self.idle_worker_selected:
                     self.idle_worker_selected = False
                     print('smart screen 215')
-                    return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.target])
+                    return FUNCTIONS.Harvest_Gather_screen([0], self.target)
 
             # train SCVs
             if (obs.observation["player"][3] < obs.observation["player"][4]) & (obs.observation["player"][1] >= 50) & (
@@ -555,7 +556,7 @@ class BuildMarines(BaseAgent):
                         obs.observation["player"][1] >= 100) & ((self.steps >= self.freeze_sd_building + 150) |
                                                                                    (len(self.building_locations) == 0)):
                 if (_BUILD_SUPPLY_DEPOT not in obs.observation["available_actions"]):
-                    unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     scv_observed = (unit_type == _SCV)
                     processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.99).nonzero()
                     scv_mass_top_left = [processed_neutral_x.mean() - 3, processed_neutral_y.mean() - 3]
@@ -563,7 +564,7 @@ class BuildMarines(BaseAgent):
                     print('select some scvs 235')
                     return actions.FunctionCall(_SELECT_SCREEN, [_NOT_QUEUED, scv_mass_top_left, scv_mass_bottom_right])
                 elif (_BUILD_SUPPLY_DEPOT in obs.observation["available_actions"]):
-                    player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
+                    player_relative = obs.observation["feature_screen"][_PLAYER_RELATIVE]
                     background = (player_relative == 0)
                     ####testing blocking out known placements
                     for building in self.building_locations:
@@ -589,7 +590,7 @@ class BuildMarines(BaseAgent):
                     (obs.observation["player"][1] >= 150) & (obs.observation["player"][3] >= 13) & \
                     (_BUILD_BARRACKS in obs.observation["available_actions"]):
 
-                player_relative = obs.observation["screen"][_PLAYER_RELATIVE]
+                player_relative = obs.observation["feature_screen"][_PLAYER_RELATIVE]
                 background = (player_relative == 0)
                 for building in self.building_locations:
                     background[
@@ -643,14 +644,14 @@ class BuildMarines(BaseAgent):
                 # elif (obs.observation["multi_select"].all() == _BARRACKS):
                 #     print('set barracks to control group 623')
                 #     return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
-                            # unit_type = obs.observation["screen"][_UNIT_TYPE]
+                            # unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     # barracks = (unit_type == _BARRACKS)
 
                     ###### DEBUGGING - it doesn't select all barracks for some reason
                     # print('len barracks coords', str(len(
-                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0]))))
+                    #     list((window_avg(obs.observation["feature_screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0]))))
                     # print('barracks coords', str(
-                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))
+                    #     list((window_avg(obs.observation["feature_screen"][_UNIT_TYPE] == _BARRACKS, 6) > 0.99).nonzero()[0])))
                     # np.savetxt('unit_type_array.txt', unit_type, delimiter=',')
                     # np.savetxt('barracks_array.txt', barracks, delimiter=',')
                     # test_x, test_y = barracks.nonzero()
@@ -667,14 +668,14 @@ class BuildMarines(BaseAgent):
                     # print('set barracks to control group 4')
                     # return actions.FunctionCall(_CONTROL_GROUP, [_SET_CONTROL_GROUP, [4]])
                 # else:
-                    # unit_type = obs.observation["screen"][_UNIT_TYPE]
+                    # unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                     # barracks = (unit_type == _BARRACKS)
 
                     ###### DEBUGGING - it doesn't select all barracks for some reason
                     # print('len barracks coords', str(len(
-                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 4) > 0.99).nonzero()[0]))))
+                    #     list((window_avg(obs.observation["feature_screen"][_UNIT_TYPE] == _BARRACKS, 4) > 0.99).nonzero()[0]))))
                     # print('barracks coords', str(
-                    #     list((window_avg(obs.observation["screen"][_UNIT_TYPE] == _BARRACKS, 4) > 0.99).nonzero()[0])))
+                    #     list((window_avg(obs.observation["feature_screen"][_UNIT_TYPE] == _BARRACKS, 4) > 0.99).nonzero()[0])))
                     # np.savetxt('unit_type_array.txt', unit_type, delimiter=',')
                     # np.savetxt('barracks_array.txt', barracks, delimiter=',')
                     # test_x, test_y = barracks.nonzero()
@@ -714,7 +715,7 @@ class BuildMarines(BaseAgent):
             if _cycler == 0:
                 return actions.FunctionCall(_CONTROL_GROUP, [_SELECT_CONTROL_GROUP, [5]])
             elif _cycler == 1:
-                unit_type = obs.observation["screen"][_UNIT_TYPE]
+                unit_type = obs.observation["feature_screen"][_UNIT_TYPE]
                 scv_observed = (unit_type == _SCV)
                 processed_neutral_y, processed_neutral_x = (window_avg(scv_observed, 1) > 0.8).nonzero()
                 scv_mass_top_left = [processed_neutral_x.mean() - 5, processed_neutral_y.mean() - 5]

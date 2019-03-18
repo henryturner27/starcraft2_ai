@@ -7,6 +7,8 @@ import numpy as np
 from pysc2.lib import actions
 from pysc2.lib import features
 
+FUNCTIONS = actions.FUNCTIONS
+
 _PLAYER_RELATIVE = features.SCREEN_FEATURES.player_relative.index
 _UNIT_TYPE = features.SCREEN_FEATURES.unit_type.index
 _UNIT_DENSITY = features.SCREEN_FEATURES.unit_density.index
@@ -244,8 +246,7 @@ class TerranBasicAgent(BaseAgent):
                     random_mineral_selection = np.random.choice(range(len(processed_neutral_x)))
                     random_minerals = [int(processed_neutral_x[random_mineral_selection]), int(processed_neutral_y[random_mineral_selection])]
                     print('smart screen 215')
-                    return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, random_minerals])
-
+                    return FUNCTIONS.Harvest_Gather_screen([0], random_minerals)
             # train SCVs
             if (obs.observation["player"][3] < obs.observation["player"][4]) & (obs.observation["player"][1] >= 50) & (
                         obs.observation["player"][6] < 22) & (_TRAIN_SCV in obs.observation["available_actions"]):
@@ -421,7 +422,7 @@ class TerranBasicAgent(BaseAgent):
                     self.workers_on_ref_one += 1
                     self.assigned_worker_to_gas = self.steps
                     print('set scv to refinery 290')
-                    return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.first_refinery_location])
+                    return FUNCTIONS.Harvest_Gather_screen([0], self.first_refinery_location)
             if (self.refineries_built == 1) & (self.workers_on_ref_one < 2) & (
                         _MOVE_SCREEN in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_ref_worker_assignment + 75):
@@ -440,7 +441,7 @@ class TerranBasicAgent(BaseAgent):
                     self.workers_on_ref_two += 1
                     self.assigned_worker_to_gas = self.steps
                     print('set scv to refinery 300')
-                    return actions.FunctionCall(_SMART_SCREEN, [_NOT_QUEUED, self.second_refinery_location])
+                    return FUNCTIONS.Harvest_Gather_screen([0], self.second_refinery_location)
             if (self.refineries_built == 2) & (self.workers_on_ref_two < 2) & (
                         _MOVE_SCREEN in obs.observation["available_actions"]) & (
                         self.steps >= self.freeze_ref_worker_assignment + 75):
@@ -520,7 +521,7 @@ class TerranBasicAgent(BaseAgent):
             if (self.production_buildings_selected is True) & (self.production_rally_set is False):
                 self.production_rally_set = True
                 print('rally production buildings to front ramp 504')
-                return actions.FunctionCall(_SMART_MINIMAP, [_NOT_QUEUED, [self.front_ramp[1], self.front_ramp[0]]])
+                return FUNCTIONS.Rally_Units_minimap([0], [self.front_ramp[1], self.front_ramp[0]])
 
             # train marines
             if (obs.observation["player"][3] < obs.observation["player"][4]) & (obs.observation["player"][1] >= 50) & (
