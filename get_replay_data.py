@@ -14,7 +14,7 @@ from pysc2.lib import point
 
 from s2clientprotocol import sc2api_pb2 as sc_pb
 
-import starcraft2_ai.platform_settings as platform_settings
+import platform_settings
 
 FLAGS = flags.FLAGS
 

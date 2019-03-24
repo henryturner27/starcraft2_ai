@@ -2,6 +2,7 @@ from platform import system
 from os import getlogin, environ, makedirs
 import json
 
+
 def get_replay_dir():
     replay_dir = None
 
